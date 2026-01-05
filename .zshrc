@@ -110,8 +110,8 @@ zinit wait lucid for \
 
 PS1="READY >"
 zinit ice wait'!' lucid
-zinit ice from"gh-r" as"command" atload'eval "$(starship init zsh)"'
-zinit load starship/starship
+# zinit ice from"gh-r" as"command" atload'eval "$(starship init zsh)"'
+# zinit load starship/starship
 
 
 # - - - - - - - - - - - - - - - - - - - -
@@ -141,34 +141,34 @@ zinit ice wait lucid atload'__bind_history_keys'
 zinit light zsh-users/zsh-history-substring-search
 
 # Recommended Be Loaded Last.
+# zinit wait lucid light-mode for \
+#   atinit'zicdreplay' atload'FAST_HIGHLIGHT[chroma-man]=' \
+#   atclone'(){local f;cd -q →*;for f (*~*.zwc){zcompile -Uz -- ${f}};}' \
+#   compile'.*fast*~*.zwc' nocompletions atpull'%atclone' \
+#     zdharma-continuum/fast-syntax-highlighting \
+#     zsh-users/zsh-autosuggestions \
+#   blockf lucid atpull'zinit creinstall -q .' \
+#     zsh-users/zsh-completions
+
 zinit wait lucid light-mode for \
-  atinit'zicdreplay' atload'FAST_HIGHLIGHT[chroma-man]=' \
-  atclone'(){local f;cd -q →*;for f (*~*.zwc){zcompile -Uz -- ${f}};}' \
-  compile'.*fast*~*.zwc' nocompletions atpull'%atclone' \
+ atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
     zdharma-continuum/fast-syntax-highlighting \
-    zsh-users/zsh-autosuggestions \
-  blockf lucid atpull'zinit creinstall -q .' \
-    zsh-users/zsh-completions
+ blockf \
+    zsh-users/zsh-completions \
+ atload"!_zsh_autosuggest_start" \
+    zsh-users/zsh-autosuggestions
 
 # - - - - - - - - - - - - - - - - - - - -
 # Custom Configs
 # - - - - - - - - - - - - - - - - - - - -
 
-eval "$(zoxide init zsh)"
 eval "$(fzf --zsh)"
+eval "$(zoxide init zsh)"
+eval "$(starship init zsh)"
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 # [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-
-# CUSTOM VARS
-export ANDROID_HOME=$HOME/Library/Android/sdk 
-export ANDROID_HOME=$HOME/Library/Android/sdk 
-export PATH=$PATH:$ANDROID_HOME/emulator 
-export PATH=$PATH:$ANDROID_HOME/tools 
-export PATH=$PATH:$ANDROID_HOME/tools/bin 
-export PATH=$PATH:$ANDROID_HOME/platform-tools
-export JAVA_HOME=$(/usr/libexec/java_home)
 
 alias remove_node_modules="find . -type d -path './.*' -prune -o -path './Pictures*' -prune -o -path './Library*' -prune -o -path '*node_modules/*' -prune -o -type d -name 'node_modules' -exec touch '{}/.metadata_never_index' \; -print"
 
@@ -176,71 +176,22 @@ alias remove_node_modules="find . -type d -path './.*' -prune -o -path './Pictur
 alias ll="ls -lah"
 alias ssh="TERM=xterm-256color ssh"
 alias vim="nvim"
-# alias update-nvim-stable='asdf uninstall neovim stable && asdf install neovim stable'
-# alias update-nvim-nightly='asdf uninstall neovim nightly && asdf install neovim nightly'
 alias update-all='brew upgrade && zinit self-update && zinit update'
 alias git-cleanup="git fetch -p && git branch --merged main | grep -v '^[ *]*main$' | xargs git branch -d"
 alias ls="ls -G"
 
-
-build_path_common() {
-  local current_dir=`pwd`
-
-  echo ${current_dir}
-  cd /Users/bruno/Documents/Projects/$1/libraries/common
-  {
-    pnpm build &&
-    rm -rf ${current_dir}/node_modules/$1/common/dist &&  cp -r dist ${current_dir}/node_modules/$1/common/dist  &&
-    rm -rf ${current_dir}/node_modules/$1/common/package.json &&  cp -r ./package.json ${current_dir}/node_modules/$1/common/package.json &&
-    cd -- $current_dir
-  } || { 
-    echo 'FAILED BUILDING COMMONS'
-    cd -- $current_dir
-  }
-}
-
-build_lib() {
-  local current_dir=`pwd`
-
-  echo ${current_dir}
-  cd /Users/bruno/Documents/Projects/open-source/$1
-
-  {
-    pnpm build &&
-    echo Moving $1 to ${current_dir}/node_modules/$2 &&
-    rm -rf ${current_dir}/node_modules/$2/dist &&  cp -r dist ${current_dir}/node_modules/$2/dist &&
-    cd -- $current_dir
-  } || { 
-    echo 'FAILED BUILDING COMMONS'
-    cd -- $current_dir
-  }
-}
-
-commit_dotfiles() { 
-    local repo_path=`~/Documents/Projects/open-source/dotfiles`
-    cp -r ~/.config/ghostty ~/Documents/Projects/open-source/dotfiles
-    cp -r ~/.config/nvim ${repo_path}
-    cp -r ~/.config/starship.toml ${repo_path}
-    cp ~/.zshrc ${repo_path}
-    
-    cd ${repo_path}
-    git add --all 
-    git commit -m "updated dotfiles"
-    git push
-}
-
-export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
-export PATH="${HOME}/.pyenv/shims:${PATH}"
-export PATH="/Users/bruno/.local/share/mise/shims:$PATH"
+# export PATH="/Users/bruno/.local/share/mise/shims:$PATH"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
-export PATH="$PATH:/Users/bruno/.dotnet/tools"
+export LDFLAGS="-L$(brew --prefix openssl)/lib" 
+export CPPFLAGS="-I$(brew --prefix openssl)/include"
+
 # setopt appendhistory
 # setopt sharehistory
 setopt HIST_IGNORE_SPACE 
 setopt HIST_IGNORE_ALL_DUPS
 
 # pnpm
-export PNPM_HOME="/Users/bruno/Library/pnpm"
+export PNPM_HOME="/opt/homebrew/bin/pnpm"
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
@@ -250,3 +201,10 @@ esac
 # tabtab source for packages
 # uninstall by removing these lines
 # [[ -f ~/.config/tabtab/zsh/__tabtab.zsh ]] && . ~/.config/tabtab/zsh/__tabtab.zsh || true
+export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+
+# bun completions
+
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
