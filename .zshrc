@@ -1,10 +1,3 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-# if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-#   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-# fi
-
 # - - - - - - - - - - - - - - - - - - - -
 # Homebrew Configuration
 # - - - - - - - - - - - - - - - - - - - -
@@ -16,7 +9,6 @@ export PATH="/opt/homebrew/bin:$PATH"
 
 # Homebrew Requires This.
 export PATH="/usr/local/sbin:$PATH"
-
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
 # - - - - - - - - - - - - - - - - - - - -
@@ -24,20 +16,64 @@ eval "$(/opt/homebrew/bin/brew shellenv)"
 # - - - - - - - - - - - - - - - - - - - -
 
 # Load The Prompt System And Completion System And Initilize Them.
-autoload -Uz compinit promptinit
+() {
+  setopt local_options
 
-# Load And Initialize The Completion System Ignoring Insecure Directories With A
-# Cache Time Of 20 Hours, So It Should Almost Always Regenerate The First Time A
-# Shell Is Opened Each Day.
-# See: https://gist.github.com/ctechols/ca1035271ad134841284
-_comp_files=(${ZDOTDIR:-$HOME}/.zcompdump(Nm-20))
-if (( $#_comp_files )); then
-    compinit -i -C
-else
-    compinit -i
-fi
-unset _comp_files
-promptinit
+  local zcompdump="${ZDOTDIR:-$HOME}/.zcompdump"
+  local zcomp_ttl=1  # how many days to let the zcompdump file live before it must be recompiled
+  local lock_timeout=1  # register an error if lock-timeout exceeded
+  local lockfile="${zcompdump}.lock"
+
+  autoload -Uz compinit
+
+  # check for lockfile — if the lockfile exists, we cannot run a compinit
+  #   if no lockfile, then we will create one, and set a trap on EXIT to remove it;
+  #   the trap will trigger after the rest of the function has run.
+  if [ -f "${lockfile}" ]
+  then 
+
+    # error log if the lockfile outlived its timeout
+    if [ "$( find "${lockfile}" -mmin $lock_timeout )" ]
+    then
+      (
+        echo "${lockfile} has been held by $(< ${lockfile}) for longer than ${lock_timeout} minute(s)."
+        echo "This may indicate a problem with compinit"
+      ) >&2
+    fi
+
+    # since the zcompdump is still locked, run compinit without generating a new dump
+    compinit -D -d "$zcompdump"
+
+    # Exit if there's a lockfile; another process is handling things
+    return 1
+
+  else
+
+    # Create the lockfile with this shell's PID for debugging
+    echo $$ > "${lockfile}"
+
+    # Ensure the lockfile is removed on exit
+    trap "rm -f '${lockfile}'" EXIT
+
+  fi
+
+
+  # refresh the zcompdump file if needed
+  if [ ! -f "$zcompdump" -o "$( find "$zcompdump" -mtime "+${zcomp_ttl}" )" ]
+  then
+    # if the zcompdump is expired (past its ttl) or absent, we rebuild it
+    compinit -d "$zcompdump"
+
+  else
+
+    # load the zcompdump without updating
+    compinit -CD -d "$zcompdump"
+
+    # asynchronously rebuild the zcompdump file
+    (autoload -Uz compinit; compinit -d "$zcompdump" &);
+
+  fi
+}
 setopt prompt_subst
 
 # Zstyle.
@@ -88,10 +124,6 @@ zinit light-mode for \
 
 ### End of Zinit's installer chunk
 
-# - - - - - - - - - - - - - - - - - - - -
-# Theme
-# - - - - - - - - - - - - - - - - - - - -
-
 # Most Themes Use This Option.
 setopt promptsubst
 
@@ -100,12 +132,6 @@ zinit wait lucid for \
         OMZ::lib/git.zsh \
     atload"unalias grv" \
         OMZ::plugins/git/git.plugin.zsh
-
-#### POWERLEVEL10K
-# Provide A Simple Prompt Till The Theme Loads
-# PS1="READY >"
-# zinit ice wait'!' lucid
-# zinit ice depth=1; zinit light romkatv/powerlevel10k
 
 
 PS1="READY >"
@@ -140,35 +166,18 @@ function __bind_history_keys() {
 zinit ice wait lucid atload'__bind_history_keys'
 zinit light zsh-users/zsh-history-substring-search
 
-# Recommended Be Loaded Last.
-# zinit wait lucid light-mode for \
-#   atinit'zicdreplay' atload'FAST_HIGHLIGHT[chroma-man]=' \
-#   atclone'(){local f;cd -q →*;for f (*~*.zwc){zcompile -Uz -- ${f}};}' \
-#   compile'.*fast*~*.zwc' nocompletions atpull'%atclone' \
-#     zdharma-continuum/fast-syntax-highlighting \
-#     zsh-users/zsh-autosuggestions \
-#   blockf lucid atpull'zinit creinstall -q .' \
-#     zsh-users/zsh-completions
-
 zinit wait lucid light-mode for \
- atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
+  atinit'zicdreplay' atload'FAST_HIGHLIGHT[chroma-man]=' \
+  atclone'(){local f;cd -q →*;for f (*~*.zwc){zcompile -Uz -- ${f}};}' \
+  compile'.*fast*~*.zwc' nocompletions atpull'%atclone' \
     zdharma-continuum/fast-syntax-highlighting \
- blockf \
-    zsh-users/zsh-completions \
- atload"!_zsh_autosuggest_start" \
-    zsh-users/zsh-autosuggestions
+    zsh-users/zsh-autosuggestions \
+  blockf lucid atpull'zinit creinstall -q .' \
+    zsh-users/zsh-completions
 
 # - - - - - - - - - - - - - - - - - - - -
 # Custom Configs
 # - - - - - - - - - - - - - - - - - - - -
-
-eval "$(fzf --zsh)"
-eval "$(zoxide init zsh)"
-eval "$(starship init zsh)"
-
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-# [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
 
 alias remove_node_modules="find . -type d -path './.*' -prune -o -path './Pictures*' -prune -o -path './Library*' -prune -o -path '*node_modules/*' -prune -o -type d -name 'node_modules' -exec touch '{}/.metadata_never_index' \; -print"
 
@@ -182,6 +191,7 @@ alias ls="ls -G"
 
 # export PATH="/Users/bruno/.local/share/mise/shims:$PATH"
 export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
+export PATH="/Users/bruno.galdino/.local/bin:$PATH"
 export LDFLAGS="-L$(brew --prefix openssl)/lib" 
 export CPPFLAGS="-I$(brew --prefix openssl)/include"
 
@@ -208,3 +218,8 @@ export PATH="/opt/homebrew/opt/libpq/bin:$PATH"
 # bun
 export BUN_INSTALL="$HOME/.bun"
 export PATH="$BUN_INSTALL/bin:$PATH"
+
+eval "$(fzf --zsh)"
+eval "$(starship init zsh)"
+eval "$(mise activate zsh)"
+e
