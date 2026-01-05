@@ -1,10 +1,12 @@
 # theme = kanagawabones
 # font-family = Victor Mono
 
-theme = GruvboxDarkHard
+theme = Gruvbox Dark Hard
 
 background-opacity = 1
-background-blur-radius = 20
+# background-blur-radius = 40
+# background-opacity = 0.85
+# background-blur-radius = 100
 
 window-padding-y = 0
 font-family = SFMono
@@ -14,12 +16,16 @@ adjust-cell-height = 10%
 mouse-hide-while-typing = true
 window-padding-balance = true
 window-save-state = always
-# window-colorspace = "display-p3"
+#window-colorspace = "display-p3"
 
 font-size = 13
 
 macos-titlebar-style = tabs
 macos-titlebar-proxy-icon = hidden
 macos-option-as-alt = true
+
+window-padding-x = 8
+window-padding-y = 8
+window-padding-balance = true
 
 keybind = cmd+i=prompt_surface_title
