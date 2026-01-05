@@ -1,8 +1,8 @@
 "$schema" = 'https://starship.rs/config-schema.json'
 
+# $os\
 format = """
 [╭](fg:current_line)\
-$os\
 $status\
 $directory\
 $git_branch\
@@ -27,6 +27,8 @@ $character\
 palette = 'catppuccin_mocha'
 # palette = 'tokyo_night'
 add_newline = true
+command_timeout = 3600000
+
 
 [palettes.catppuccin_mocha]
 foreground = '#D9E0EE'
